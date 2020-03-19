@@ -20,8 +20,6 @@ a new SSR SS V2ray luci app bese luci-app-ssr-plus
 
 ###  此版本已和魔改版合并
 
-#### Notice
-需要的依赖有python3-maxminddb libmaxminddb 请自行添加
 
 #### 感谢
 https://github.com/coolsnowwolf/lede
@@ -43,10 +41,6 @@ theme : https://github.com/Leo-Jo-My/luci-theme-Butterfly-dark
 
 源码来源：https://github.com/jerrykuku/luci-app-vssr
 
-### 如发现某些网站无法正常加载图片ssh执行已下操作
-    cd ..
-
-    rm -rfv  etc/dnsmasq.ssr/ad.conf
 
 ### 使用方法
 ```Brach
