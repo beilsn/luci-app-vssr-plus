@@ -56,6 +56,6 @@ theme : https://github.com/Leo-Jo-My/luci-theme-Butterfly-dark
     
     #编译
     
-    make package/luci-app-vssr/{clean,compile} V=s
+    make package/uci-app-vssr-plus/{clean,compile} V=s
 
 
