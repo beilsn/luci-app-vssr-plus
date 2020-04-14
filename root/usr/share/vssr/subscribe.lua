@@ -3,33 +3,33 @@
 -- This file is part of the luci-app-ssr-plus subscribe.lua
 -- @author William Chan <root@williamchan.me>
 ------------------------------------------------
-require 'nixio'
-require 'luci.util'
-require 'luci.jsonc'
-require 'luci.sys'
-require 'uci'
+require "luci.model.uci"
+require "nixio"
+require "luci.util"
+require "luci.sys"
+require "luci.jsonc"
 -- these global functions are accessed all the time by the event handler
 -- so caching them is worth the effort
-local luci = luci
 local tinsert = table.insert
 local ssub, slen, schar, sbyte, sformat, sgsub = string.sub, string.len, string.char, string.byte, string.format, string.gsub
 local jsonParse, jsonStringify = luci.jsonc.parse, luci.jsonc.stringify
 local b64decode = nixio.bin.b64decode
 local cache = {}
-local nodeResult = setmetatable({}, { __index = cache })  -- update result
+local nodeResult = setmetatable({}, { __index = cache }) -- update result
 local name = 'vssr'
 local uciType = 'servers'
 local ucic = luci.model.uci.cursor()
 local proxy = ucic:get_first(name, 'server_subscribe', 'proxy', '0')
 local switch = ucic:get_first(name, 'server_subscribe', 'switch', '1')
 local subscribe_url = ucic:get_first(name, 'server_subscribe', 'subscribe_url', {})
+local filter_words = ucic:get_first(name, 'server_subscribe', 'filter_words', '过期时间/剩余流量')
 
 local log = function(...)
 	print(os.date("%Y-%m-%d %H:%M:%S ") .. table.concat({ ... }, " "))
 end
 -- 分割字符串
 local function split(full, sep)
-	full = full:gsub("%z", "")  -- 这里不是很清楚 有时候结尾带个\0
+	full = full:gsub("%z", "") -- 这里不是很清楚 有时候结尾带个\0
 	local off, result = 1, {}
 	while true do
 		local nStart, nEnd = full:find(sep, off)
@@ -73,7 +73,7 @@ local function trim(text)
 end
 -- md5
 local function md5(content)
-	local stdout = luci.sys.exec('echo \"' .. urlEncode(content) .. '\" | md5sum | cut -d \" \"  -f1')
+	local stdout = luci.sys.exec('echo \"' .. urlEncode(content) .. '\" | md5sum | cut -d \" \" -f1')
 	-- assert(nixio.errno() == 0)
 	return trim(stdout)
 end
@@ -118,7 +118,7 @@ local function processData(szType, content)
 		result.protocol_param = base64Decode(params.protoparam)
 		local group = base64Decode(params.group)
 		if group then
-			result.alias = "["  .. group .. "] "
+			result.alias = "[" .. group .. "] "
 		end
 		result.alias = result.alias .. base64Decode(params.remarks)
 	elseif szType == 'vmess' then
@@ -276,8 +276,20 @@ local function processData(szType, content)
 end
 -- wget
 local function wget(url)
-	local stdout = luci.sys.exec('wget-ssl --user-agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36" --no-check-certificate -t 3 -T 10 -O- "' .. url .. '"')
+	local stdout = luci.sys.exec('wget-ssl -q --user-agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36" --no-check-certificate -t 3 -T 10 -O- "' .. url .. '"')
 	return trim(stdout)
+end
+
+local function check_filer(result)
+	do
+		local filter_word = split(filter_words, "/")
+		for i, v in pairs(filter_word) do
+			if result.alias:find(v) then
+				log('订阅节点关键字过滤:“' .. v ..'” ，该节点被丢弃')
+				return true
+			end
+		end
+	end
 end
 
 local execute = function()
@@ -302,10 +314,10 @@ local execute = function()
 					nodes = base64Decode(raw:sub(nEnd + 1, #raw))
 					nodes = jsonParse(nodes)
 					local extra = {
-						airport = nodes.airport,
-						port = nodes.port,
-						encryption = nodes.encryption,
-						password = nodes.password
+					airport = nodes.airport,
+					port = nodes.port,
+					encryption = nodes.encryption,
+					password = nodes.password
 					}
 					local servers = {}
 					-- SS里面包着 干脆直接这样
@@ -337,14 +349,12 @@ local execute = function()
 						end
 						-- log(result)
 						if result then
-							if result.alias:find("过期时间") or
-								result.alias:find("剩余流量") or
-								result.alias:find("QQ群") or
-								result.alias:find("官网") or
-								result.alias:find("防失联地址") or
+							if
 								not result.server or
+								not result.server_port or
+								check_filer(result) or
 								result.server:match("[^0-9a-zA-Z%-%.%s]") -- 中文做地址的 也没有人拿中文域名搞，就算中文域也有Puny Code SB 机场
-							then
+								then
 								log('丢弃无效节点: ' .. result.type ..' 节点, ' .. result.alias)
 							else
 								log('成功解析: ' .. result.type ..' 节点, ' .. result.alias)
@@ -356,13 +366,17 @@ local execute = function()
 					end
 				end
 				log('成功解析节点数量: ' ..#nodes)
-			
+			else
+				log(url .. ': 获取内容为空')
 			end
 		end
 	end
 	-- diff
 	do
-		assert(next(nodeResult), "node result is empty")
+		if next(nodeResult) == nil then
+			log("更新失败，没有可用的节点信息")
+			return
+		end
 		local add, del = 0, 0
 		ucic:foreach(name, uciType, function(old)
 			if old.grouphashkey or old.hashkey then -- 没有 hash 的不参与删除
@@ -373,16 +387,14 @@ local execute = function()
 					local dat = nodeResult[old.grouphashkey][old.hashkey]
 					ucic:tset(name, old['.name'], dat)
 					-- 标记一下
-					setmetatable(nodeResult[old.grouphashkey][old.hashkey], { __index =  { _ignore = true } })
+					setmetatable(nodeResult[old.grouphashkey][old.hashkey], { __index = { _ignore = true } })
 				end
 			else
-				   if (old.alias ~= nil) then
-                                                                     log('忽略手动添加的节点: ' .. old.alias)
-                                                   else
-                                                                     log('忽略手动添加的无效节点')
-                                                   end
+				if not old.alias then
+					old.alias = old.server .. ':' .. old.server_port
+				end
+				log('忽略手动添加的节点: ' .. old.alias)
 			end
-
 		end)
 		for k, v in ipairs(nodeResult) do
 			for kk, vv in ipairs(v) do

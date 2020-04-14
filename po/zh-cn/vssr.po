@@ -784,6 +784,11 @@ msgstr "端口"
 msgid "Socket Connected"
 msgstr "连接测试"
 
+msgid "Hello World version update"
+msgstr "Hello World 版本更新"
+
+msgid "update version"
+msgstr "更新版本"
 
 msgid "Enable HTTP Proxy"
 msgstr "启用HTTP代理"

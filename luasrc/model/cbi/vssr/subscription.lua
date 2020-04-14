@@ -49,6 +49,9 @@ o.rmempty = false
 o = s:option(DynamicList, "subscribe_url", translate("Subscribe URL"))
 o.rmempty = true
 
+o = s:option(Value, "filter_words", translate("Subscribe Filter Words"))
+o.rmempty = true
+o.description = translate("Filter Words splited by /")
 
 o = s:option(Flag, "proxy", translate("Through proxy update"))
 o.rmempty = false
@@ -58,6 +61,14 @@ o = s:option(Flag, "switch", translate("Subscribe Default Auto-Switch"))
 o.rmempty = false
 o.description = translate("Subscribe new add server default Auto-Switch on")
 o.default="0"
+
+o = s:option(Button,"update",translate("Hello World version update"))
+o.inputtitle = translate("update version")
+o.inputstyle = "reload"
+o.write = function()
+  luci.sys.call("bash /usr/share/vssr/up.sh >>/tmp/vssr.log 2>&1")
+  luci.http.redirect(luci.dispatcher.build_url("admin", "vpn", "vssr", "subscription"))
+end
 
 o = s:option(DummyValue, "", "")
 o.rawhtml = true
