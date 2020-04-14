@@ -50,6 +50,8 @@ theme : https://github.com/Leo-Jo-My/luci-theme-Butterfly-dark
     
     git clone https://github.com/Leo-Jo-My/luci-app-vssr-plus package/luci-app-vssr-plus
     
+    git clone https://github.com/Leo-Jo-My/my package/my  #依赖包
+    
     make menuconfig
     
     #编译
