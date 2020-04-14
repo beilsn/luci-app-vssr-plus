@@ -192,6 +192,19 @@ do
 			( /usr/bin/v2ray/v2ray -config /var/etc/v2-ssr-local.json >/dev/null 2>&1 &)
 		fi   
       fi
+#local
+	if [ $local_process -eq 4 ] ;then
+		local_processs=1
+		icount=`ps -w  | grep trojan-ssr-local |grep -v grep| wc -l`
+		if [ $icount -lt $local_processs ]  #如果进程挂掉就重启它
+		then
+			logger -t "$NAME" "trojan local error.restart!"
+			echo "$(date "+%Y-%m-%d %H:%M:%S") trojan local error.restart!" >> ${logfile}
+			kill -9 $(ps | grep trojan-ssr-local | grep -v grep | awk '{print $1}') >/dev/null 2>&1
+
+			( /usr/sbin/trojan -config /var/etc/trojan-ssr-local.json >/dev/null 2>&1 &)
+		fi   
+      fi
 #privoxy
 	if [ $privoxy_process -gt 0 ] ;then
 		icount=`ps -w  | grep privoxy |grep -v grep| wc -l`
