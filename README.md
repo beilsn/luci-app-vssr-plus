@@ -1,4 +1,4 @@
-# luci-app-vssr
+# luci-app-vssr-plus
 a new SSR SS V2ray luci app bese luci-app-ssr-plus
 
 #### Intro
@@ -46,9 +46,7 @@ theme : https://github.com/Leo-Jo-My/luci-theme-Butterfly-dark
 ```Brach
     #下载源码
     
-    git clone https://github.com/Leo-Jo-My/luci-app-vssr package/luci-app-vssr
-    
-    git clone https://github.com/Leo-Jo-My/my package/my  #依赖包
+    git clone https://github.com/Leo-Jo-My/luci-app-vssr-plus package/luci-app-vssr-plus
     
     make menuconfig
     
