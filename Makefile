@@ -69,11 +69,11 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ipt2socks
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_microsocks
 	bool "Include microsocks"
-	default n
+	default y
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_dns2socks
 	bool "Include dns2socks"
-	default n 
+	default y 
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_dnscrypt_proxy
 	bool "Include dnscrypt-proxy-full"
@@ -89,7 +89,7 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_haproxy
 	bool "Include haproxy"
-	default n
+	default y
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_privoxy
 	bool "Include privoxy http local"
@@ -113,11 +113,11 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_udp2raw-tunnel
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_GoQuiet-client
 	bool "Include GoQuiet-client"
-	default n
+	default y
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_GoQuiet-server
 	bool "Include GoQuiet-server"
-	default n
+	default y
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_v2ray-plugin
 	bool "Include v2ray-plugin"
