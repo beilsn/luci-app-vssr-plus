@@ -208,6 +208,10 @@ if luci.sys.call("ps -w | grep v2-ssr-local | grep -v grep >/dev/null") == 0 the
 v2sock5_run=1
 end
 
+if luci.sys.call("ps -w | grep microsocks | grep -v grep >/dev/null") == 0 then
+tjsock5_run=1
+end
+
 if luci.sys.call("pidof privoxy >/dev/null") == 0 then
 privoxy_run=1
 end
@@ -377,6 +381,17 @@ else
 s.value = translate("Not Running")
 end
 end
+
+if nixio.fs.access("/usr/sbin/trojan") then
+s=m:field(DummyValue,"tjsock5_run",translate("Trojan SOCKS5 Proxy")) 
+s.rawhtml  = true
+if tjsock5_run == 1 then
+s.value =font_blue .. bold_on .. translate("Running") .. bold_off .. font_off
+else
+s.value = translate("Not Running")
+end
+end
+
 
 if nixio.fs.access("/usr/sbin/privoxy") then
 s=m:field(DummyValue,"privoxy_run",translate("HTTP Proxy")) 
