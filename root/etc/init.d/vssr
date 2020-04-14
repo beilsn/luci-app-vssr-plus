@@ -930,6 +930,7 @@ start_local() {
 	local local_server=$(uci_get_by_type socks5_proxy server)
 	local http_enable=$(uci_get_by_type socks5_proxy http_enable)
 	local stype=$(uci_get_by_name $local_server type)
+	[ "$local_server" == "same" ] && local_server=$GLOBAL_SERVER
 	[ "$local_server" = "nil" ] && return 1
 	mkdir -p /var/run /var/etc
 		gen_config_file $local_server 2
@@ -950,6 +951,13 @@ start_local() {
 		sed -i 's/\\//g' /var/etc/v2-ssr-local.json
 		/usr/bin/v2ray/v2ray -config /var/etc/v2-ssr-local.json >/dev/null 2>&1 &
 		local_enable=3
+	elif [ "$stype" == "trojan" ] ;then
+		lua /usr/share/vssr/gentrojanconfig.lua $local_server client $(uci_get_by_type socks5_proxy local_port 1080) >/var/etc/trojan-ssr-local.json
+		sed -i 's/\\//g' /var/etc/trojan-ssr-local.json
+		/usr/sbin/trojan --config /var/etc/trojan-ssr-local.json >/dev/null 2>&1 &
+                         else
+		microsocks -i :: -p $(uci_get_by_type socks5_proxy local_port 1080) ssr-local >/dev/null 2>&1 &
+		local_enable=4
 
 	fi
 
