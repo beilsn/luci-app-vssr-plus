@@ -14,6 +14,7 @@ PKG_CONFIG_DEPENDS:= CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Socks \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_ipt2socks \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_microsocks \
+	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_redsocks2 \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_dns2socks \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_dnscrypt_proxy \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_dnsforwarder \
@@ -69,6 +70,10 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ipt2socks
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_microsocks
 	bool "Include microsocks"
+	default y
+
+config PACKAGE_$(PKG_NAME)_INCLUDE_redsocks2
+	bool "Include redsocks2"
 	default y
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_dns2socks
@@ -141,6 +146,7 @@ define Package/luci-app-vssr-plus
             +PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Socks:shadowsocks-libev-ss-local \
             +PACKAGE_$(PKG_NAME)_INCLUDE_ipt2socks:ipt2socks \
 	    +PACKAGE_$(PKG_NAME)_INCLUDE_microsocks:microsocks \
+	    +PACKAGE_$(PKG_NAME)_INCLUDE_redsocks2:redsocks2 \
 	    +PACKAGE_$(PKG_NAME)_INCLUDE_dns2socks:dns2socks \
             +PACKAGE_$(PKG_NAME)_INCLUDE_dnscrypt_proxy:dnscrypt-proxy-full \
             +PACKAGE_$(PKG_NAME)_INCLUDE_dnsforwarder:dnsforwarder \
