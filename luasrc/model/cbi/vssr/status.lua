@@ -208,7 +208,7 @@ if luci.sys.call("ps -w | grep v2-ssr-local | grep -v grep >/dev/null") == 0 the
 v2sock5_run=1
 end
 
-if luci.sys.call("ps -w | grep microsocks | grep -v grep >/dev/null") == 0 then
+if luci.sys.call("ps -w | grep trojan-ssr-local  | grep -v grep >/dev/null") == 0 then
 tjsock5_run=1
 end
 
