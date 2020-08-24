@@ -86,7 +86,7 @@ uci:delete_all("vssr", "servers", function(s)
   end
 end)
 uci:save("vssr")
-luci.sys.call("uci commit vssr && /etc/init.d/vssr stop")
+luci.sys.exec("uci commit vssr && /etc/init.d/vssr stop")
 luci.http.redirect(luci.dispatcher.build_url("admin", "vpn", "vssr", "servers"))
 return
 end
