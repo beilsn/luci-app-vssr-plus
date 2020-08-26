@@ -1,6 +1,9 @@
 msgid ""
 msgstr "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Hello World"
+msgstr "萤火虫"
+
 
 msgid "Enable"
 msgstr "启用"
@@ -32,6 +35,9 @@ msgstr "Diseny+ 代理"
 
 msgid "Prime Video Proxy"
 msgstr "Prime Video 代理"
+
+msgid "TVB Video Proxy"
+msgstr "TVB 视频代理"
 
 msgid "adblock settings"
 msgstr "广告屏蔽设置"
@@ -766,7 +772,7 @@ msgstr "SS服务端"
 
 
 msgid "Trojan SOCKS5 Proxy"
-msgstr "TROJAN SOCKS5代理"
+msgstr "Trojan SOCKS5代理"
 
 msgid "V2SOCKS5 Proxy"
 msgstr "V2ray SOCKS5代理"
@@ -788,7 +794,7 @@ msgid "Socket Connected"
 msgstr "连接测试"
 
 msgid "Hello World version update"
-msgstr "Hello World 版本更新"
+msgstr " 一键更新"
 
 msgid "update version"
 msgstr "更新版本"

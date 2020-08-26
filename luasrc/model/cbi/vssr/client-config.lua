@@ -68,7 +68,9 @@ o = s:option(ListValue, "type", translate("Server Node Type"))
 if nixio.fs.access("/usr/sbin/trojan") then
 o:value("trojan", translate("Trojan"))
 end
-
+if nixio.fs.access("/usr/bin/naive") then
+o:value("naiveproxy", translate("NaiveProxy"))
+end
 if nixio.fs.access("/usr/bin/v2ray/v2ray") then
 o:value("v2ray", translate("V2Ray"))
 end
@@ -93,11 +95,21 @@ o.rmempty = true
 o = s:option(Value, "server", translate("Server Address"))
 o.datatype = "host"
 o.rmempty = false
+o:depends("type", "ssr")
+o:depends("type", "ss")
+o:depends("type", "v2ray")
+o:depends("type", "trojan")
+o:depends("type", "naiveproxy")
+o:depends("type", "socks5")
 
 o = s:option(Value, "server_port", translate("Server Port"))
 o.datatype = "port"
 o.rmempty = false
-
+o:depends("type", "ss")
+o:depends("type", "v2ray")
+o:depends("type", "trojan")
+o:depends("type", "naiveproxy")
+o:depends("type", "socks5")
 -- o = s:option(Value, "timeout", translate("Connection Timeout"))
 -- o.datatype = "uinteger"
 -- o.default = 60
@@ -110,6 +122,7 @@ o:depends("type", "socks5")
 
 o = s:option(Value, "username", translate("Username"))
 o.rmempty = true
+o:depends("type", "naiveproxy")
 o:depends("type", "socks5")
 
 
@@ -119,6 +132,7 @@ o.rmempty = true
 o:depends("type", "ssr")
 o:depends("type", "ss")
 o:depends("type", "trojan")
+o:depends("type", "naiveproxy")
 o:depends("type", "socks5")
 
 

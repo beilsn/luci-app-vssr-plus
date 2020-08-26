@@ -12,8 +12,10 @@ START=90
 STOP=15
 
 SERVICE_DAEMONIZE=1
-NAME=vssr
 EXTRA_COMMANDS=rules
+MAXFD=32768
+NAME=vssr
+LOCK_FILE=/var/lock/${NAME}.lock
 CONFIG_FILE=/var/etc/${NAME}.json
 CONFIG_UDP_FILE=/var/etc/${NAME}_u.json
 CONFIG_SOCK5_FILE=/var/etc/${NAME}_s.json
@@ -34,7 +36,6 @@ v2rayserver_enable=0
 haproxy_enable=0
 privoxy_enable=0
 switch_server=$1
-MAXFD=32768
 CRON_FILE=/etc/crontabs/root
 threads=1
 
@@ -48,8 +49,44 @@ uci_get_by_type() {
 	echo ${ret:=$3}
 }
 
+uci_set_by_name() {
+	uci set $NAME.$1.$2=$3 2>/dev/null
+	uci commit $NAME
+}
+
+uci_set_by_type() {
+	uci set $NAME.@$1[0].$2=$3 2>/dev/null
+	uci commit $NAME
+}
+
+uci_get_by_cfgid() {
+	local ret=$(uci show $NAME.@$1[0].$2 | awk -F '.' '{print $2}' 2>/dev/null)
+	echo ${ret:=$3}
+}
+get_host_ip() {
+	local host=$1
+	local isip=""
+	local ip=$host
+	isip=$(echo $host | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+	if [ -z "$isip" ]; then
+		if [ "$host" != "${host#*:[0-9a-fA-F]}" ]; then
+			ip=$host
+		else
+			local ip=$(resolveip -4 -t 3 $host | awk 'NR==1{print}')
+			[ -z "$ip" ] && ip=$(wget -q -O- http://119.29.29.29/d?dn=$1 | awk -F ';' '{print $1}')
+		fi
+	fi
+	echo ${ip:="ERROR"}
+}
+
+clean_log() {
+	logsnum=$(cat /tmp/vssr.log 2>/dev/null | wc -l)
+	[ "$logsnum" -gt 1000 ] && {
+		echo "$(date "+%Y-%m-%d %H:%M:%S") 日志文件过长，清空处理！" >/tmp/vssr.log
+	}
+}
 add_cron() {
-	sed -i '/vssr.log/d' $CRON_FILE && echo '0 1 * * * echo "" > /tmp/vssr.log' >> $CRON_FILE
+	sed -i '/vssr.log/d' $CRON_FILE 
 	[ $(uci_get_by_type server_subscribe auto_update 0) -eq 1 ] && echo "0 $(uci_get_by_type server_subscribe auto_update_time) * * * /usr/bin/lua /usr/share/vssr/subscribe.lua" >> $CRON_FILE
 	[ $(uci_get_by_type server_subscribe auto_update 0) -eq 1 ] && echo "0 $(uci_get_by_type server_subscribe auto_update_time) * * * /usr/bin/lua /usr/share/vssr/update.lua" >> $CRON_FILE
 	crontab $CRON_FILE
@@ -59,82 +96,72 @@ del_cron() {
 	sed -i '/vssr/d' $CRON_FILE
 	sed -i '/vssr.log/d' $CRON_FILE
 	/etc/init.d/cron restart
+	clean_log
+}
+
+unlock() {
+	failcount=1
+	while [ "$failcount" -le 10 ]; do
+		if [ -f "$LOCK_FILE" ]; then
+			let "failcount++"
+			sleep 1s
+			[ "$failcount" -ge 10 ] && rm -f "$LOCK_FILE"
+		else
+			break
+		fi
+	done
 }
 
 run_mode=$(uci_get_by_type global run_mode)
 v2ray_path=$(uci_get_by_type server_subscribe v2ray_path)
+
 gen_config_file() {
-                 local use_conf_file=$(uci_get_by_name $1 use_conf_file)
-	local conf_file_path=$(uci_get_by_name $1 conf_file_path)
-	local host=$(uci_get_by_name $1 server)
-	if echo $host | grep -E "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$" >/dev/null; then
-		hostip=$host
-	elif [ "$host" != "${host#*:[0-9a-fA-F]}" ]; then
-		hostip=$host
+	local hostip=$(get_host_ip $(uci_get_by_name $1 server))
+	if [ "$hostip" == "ERROR" ]; then
+		hostip=$(uci_get_by_name $1 ip)
 	else
-		hostip=$(ping $host -W 1 -s 1 -c 1 | grep PING | cut -d'(' -f 2 | cut -d')' -f1)
-		if echo $hostip | grep -E "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$" >/dev/null; then
-			hostip=$hostip
-		else
-			hostip=$(cat /etc/ssr_ip)
-		fi
+		uci_set_by_name $1 ip $hostip
 	fi
 	[ "$2" == "0" -a "$kcp_flag" == "1" ] && hostip="127.0.0.1"
-	if [ "$2" == "0" ]; then
-		config_file=$CONFIG_FILE
-	elif [ "$2" == "1" ]; then
-		config_file=$CONFIG_UDP_FILE
-	else
-		config_file=$CONFIG_SOCK5_FILE
-	fi
+	case "$2" in
+	0) config_file=$CONFIG_FILE ;;
+	1) config_file=$CONFIG_UDP_FILE ;;
+	2) config_file=$CONFIG_NETFLIX_FILE ;;
+	*) config_file=$CONFIG_SOCK5_FILE ;;
+	esac
 	if [ $(uci_get_by_name $1 fast_open 0) == "1" ]; then
 		fastopen="true"
 	else
 		fastopen="false"
 	fi
-                 local port=$(uci_get_by_name $1 server_port)
-
-	if [ $HAPROXY_MODE = "1" ]; then
-		hostip="0.0.0.0"
-		port="4433"
-	fi
-               local local_port=$(uci_get_by_name $1 local_port)
+    local local_port=$(uci_get_by_name $1 local_port)
 	iptables -A SS_WAN_DROP -p tcp --dport $local_port -j DROP
 
 	local stype=$(uci_get_by_name $1 type)
-                local plugin=$(uci_get_by_name $1 plugin)
-
+    local plugin=$(uci_get_by_name $1 plugin)
 	if [ "$stype" == "ss" ] ;then
 		if [ "$plugin" == "none" ] ;then
-	cat <<-EOF >$config_file
-		{
-		    "server": "$hostip",
-		    "server_port": $port,
-		    "local_address": "0.0.0.0",
-		    "local_port": $local_port,
-		    "password": "$(uci_get_by_name $1 password)",
-		    "timeout": $(uci_get_by_name $1 timeout 60),
-		    "method": "$(uci_get_by_name $1 encrypt_method_ss)",
-		    "reuse_port": true,
-		    "fast_open": $fastopen
-		}
-EOF
-		else
-	cat <<-EOF >$config_file
-		{
-		    "server": "$hostip",
-		    "server_port": $port,
-		    "local_address": "0.0.0.0",
-		    "local_port": $local_port,
-		    "password": "$(uci_get_by_name $1 password)",
-		    "timeout": $(uci_get_by_name $1 timeout 60),
-		    "method": "$(uci_get_by_name $1 encrypt_method_ss)",
-		    "plugin": "$(uci_get_by_name $1 plugin)",
-		    "plugin_opts": "$(uci_get_by_name $1 plugin_opts)",
-		    "reuse_port": true,
-		    "fast_open": $fastopen
-		}
-EOF
+		cat <<-EOF >$config_file
+			{
+			"server": "$hostip",
+			"server_port": $(uci_get_by_name $1 server_port),
+			"local_address": "0.0.0.0",
+			"local_port": $3,
+			"password": "$(uci_get_by_name $1 password)",
+			"timeout": $(uci_get_by_name $1 timeout 60),
+			"method": "$(uci_get_by_name $1 encrypt_method_ss)",
+			"reuse_port": true,
+			"fast_open": $fastopen
+			}
+		EOF
+		local plugin=$(uci_get_by_name $1 plugin)
+		if [ -n "$plugin" ]; then
+			[ "$plugin" == "simple-obfs" ] && plugin="obfs-local"
+			if [ -x "/usr/bin/$plugin" ]; then
+				sed -i "s@$hostip\",@$hostip\",\n\"plugin\": \"$plugin\",\n\"plugin_opts\": \"$(uci_get_by_name $1 plugin_opts)\",@" $config_file
+			else
+				echo "$(date "+%Y-%m-%d %H:%M:%S") Warning!!! SIP003 plugin $plugin not found!!!" >>/tmp/vssr.log
+			fi
 		fi
 	elif [ "$stype" == "ssr" ]; then
 		cat <<-EOF >$config_file
@@ -157,10 +184,23 @@ EOF
 	elif [ "$stype" == "v2ray" ]; then
 		lua /usr/share/vssr/genv2config.lua $GLOBAL_SERVER tcp $(uci_get_by_name $1 local_port) >/var/etc/v2-ssr-retcp.json
 		sed -i 's/\\//g' /var/etc/v2-ssr-retcp.json
-	elif [ "$stype" == "trojan" ]; then
+    elif [ "$stype" == "trojan" ]; then
 		lua /usr/share/vssr/gentrojanconfig.lua $GLOBAL_SERVER nat $(uci_get_by_name $1 local_port) >/var/etc/trojan-ssr-retcp.json
 		sed -i 's/\\//g' /var/etc/trojan-ssr-retcp.json
-	fi
+	elif [ "$stype" == "naiveproxy" ]; then
+		case "$2" in
+		0) PROTO="redir"; FILE_NAME="retcp" ;;
+		1) PROTO="redir"; FILE_NAME="netflix" ;;
+		2) PROTO="socks"; FILE_NAME="socksdns" ;;
+		3) PROTO="socks"; FILE_NAME="local" ;;
+		esac
+		cat <<-EOF >/var/etc/naive-ssr-$FILE_NAME.json
+			{
+			"listen": "$PROTO://127.0.0.1:$3",
+			"proxy": "https://$(uci_get_by_name $1 username):$(uci_get_by_name $1 password)@$(uci_get_by_name $1 server):$(uci_get_by_name $1 server_port)"
+			}
+		EOF
+	esac
 }
 
 get_arg_out() {
@@ -222,7 +262,7 @@ start_rules() {
 	if [ $dports == "1" ]; then
 		proxyport=" "
 	else
-		proxyport="-m multiport --dports 22,53,587,465,995,993,143,80,443"
+		proxyport="-m multiport --dports 22,53,587,465,995,993,143,80,443,853"
 	fi
 	/usr/bin/vssr-rules \
 	-s "$server" \
@@ -614,8 +654,10 @@ start_redir() {
         sscmd="/usr/bin/v2ray/v2ray"
        elif [ "$stype" == "trojan" ] ;then
         sscmd="/usr/sbin/trojan"
+       elif [ "$stype" == "naiveproxy" ] ;then
+        sscmd="/usr/bin/naive"
       elif [ "$stype" == "socks5" ]; then
-      sscmd="/usr/bin/ipt2socks"
+      sscmd="/usr/sbin/redsocks2"
 
     fi
  local utype=$(uci_get_by_name $UDP_RELAY_SERVER type)
@@ -627,6 +669,8 @@ start_redir() {
         ucmd="/usr/bin/v2ray/v2ray"
        elif [ "$utype" == "trojan" ] ;then
         ucmd="/usr/sbin/trojan"
+       elif [ "$utype" == "naiveproxy" ] ;then
+        ucmd="/usr/bin/naive"
        elif [ "$stype" == "socks5" ]; then
     ucmd="/usr/bin/ipt2socks"
 	fi
@@ -653,13 +697,18 @@ start_redir() {
     echo "$(date "+%Y-%m-%d %H:%M:%S") $($sscmd -version | head -1) $threads 线程 已启动!" >> /tmp/vssr.log
 
   elif [ "$stype" == "trojan" ] ;then
-  for i in $(seq 1 $threads); do
+   for i in $(seq 1 $threads); do
     $sscmd --config /var/etc/trojan-ssr-retcp.json >/dev/null 2>&1 & 
     done
     echo "$(date "+%Y-%m-%d %H:%M:%S") $($sscmd --version 2>&1 | head -1) $threads 线程 已启动!" >> /tmp/vssr.log
 
+  elif [ "$stype" == "naiveproxy" ] ;then
+   for i in $(seq 1 $threads); do
+    $sscmd --config /var/etc/naive-ssr-retcp.json >/dev/null 2>&1 &
+	echo "$(date "+%Y-%m-%d %H:%M:%S") Main node:$($sscmd --version 2>&1 | head -1) $threads 线程 已启动!" >>/tmp/vssr.log
+
 elif [ "$stype" == "socks5" ]; then
-	for i in $(seq 1 $threads); do
+ for i in $(seq 1 $threads); do
     if [ "$(uci_get_by_name $GLOBAL_SERVER auth_enable 0)" == "0" ]; then
       $sscmd -T -4 -b 0.0.0.0 -s $(uci_get_by_name $GLOBAL_SERVER server) -p $(uci_get_by_name $GLOBAL_SERVER server_port) -l $(uci_get_by_name $GLOBAL_SERVER local_port) -R ssr-retcp >/dev/null 2>&1 &
     else
@@ -687,11 +736,14 @@ elif [ "$stype" == "socks5" ]; then
         lua /usr/share/vssr/genv2config.lua $UDP_RELAY_SERVER udp $(uci_get_by_name $UDP_RELAY_SERVER local_port) > /var/etc/v2-ssr-reudp.json
         sed -i 's/\\//g' /var/etc/v2-ssr-reudp.json
         $ucmd -config /var/etc/v2-ssr-reudp.json >/dev/null 2>&1 & 
-     elif [ "$utype" == "trojan" ] ;then
+    elif [ "$utype" == "trojan" ] ;then
         lua /usr/share/vssr/gentrojanconfig.lua $GLOBAL_SERVER client 10801 > /var/etc/trojan-ssr-reudp.json
         sed -i 's/\\//g' /var/etc/trojan-ssr-reudp.json
         $ucmd --config /var/etc/trojan-ssr-reudp.json >/dev/null 2>&1 & 
         ipt2socks -U -4 -b 0.0.0.0 -s 127.0.0.1 -p 10801 -l $(uci_get_by_name $UDP_RELAY_SERVER local_port) >/dev/null 2>&1 &
+    elif [ "$utype" == "naiveproxy" ] ; then
+		redir_udp=0
+		echo "$(date "+%Y-%m-%d %H:%M:%S") $($sscmd --version | head -1) $threads 不支持UDP TPROXY!" >>/tmp/vssr.log
 	elif [ "$utype" == "socks5" ]; then
       if [ "$(uci_get_by_name $GLOBAL_SERVER auth_enable 0)" == "0" ]; then
         $ucmd -4 -b 0.0.0.0 -s $(uci_get_by_name $UDP_RELAY_SERVER server) -p $(uci_get_by_name $UDP_RELAY_SERVER server_port) -l $(uci_get_by_name $UDP_RELAY_SERVER local_port) -U ssr-reudp >/dev/null 2>&1 &
@@ -951,14 +1003,17 @@ start_local() {
 		sed -i 's/\\//g' /var/etc/v2-ssr-local.json
 		/usr/bin/v2ray/v2ray -config /var/etc/v2-ssr-local.json >/dev/null 2>&1 &
 		local_enable=3
-	elif [ "$stype" == "trojan" ] ;then
+        elif [ "$stype" == "trojan" ] ;then
 		lua /usr/share/vssr/gentrojanconfig.lua $local_server client $(uci_get_by_type socks5_proxy local_port 1080) >/var/etc/trojan-ssr-local.json
 		sed -i 's/\\//g' /var/etc/trojan-ssr-local.json
 		/usr/sbin/trojan --config /var/etc/trojan-ssr-local.json >/dev/null 2>&1 &
                          else
 		microsocks -i :: -p $(uci_get_by_type socks5_proxy local_port 1080) ssr-local >/dev/null 2>&1 &
 		local_enable=4
-
+        elif [ "$stype" == "naiveproxy" ] ;then
+		gen_config_file $local_server 3 $(uci_get_by_type socks5_proxy local_port 1080)
+		/usr/bin/naive --config /var/etc/naive-ssr-local.json >/dev/null 2>&1 &
+        local_enable=5
 	fi
 
 	if [ "$http_enable" -eq 1 ] ;then
@@ -1060,7 +1115,8 @@ stop() {
 	killall -q -9 vssr-monitor
 	killall -q -9 ss-redir
 	killall -q -9 ssr-redir
-        killall -q -9 trojan
+    killall -q -9 trojan
+    killall -q -9 naive
 	killall -q -9 v2ray
 	killall -q -9 ssr-server
 	killall -q -9 ss-server
@@ -1069,21 +1125,21 @@ stop() {
 	killall -q -9 ss-local
 	killall -q -9 haproxy
 	killall -q -9 privoxy
-        killall -q -9 ipt2socks
+    killall -q -9 ipt2socks
 	killall -q -9 microsocks
 	killall -q -9  dns2socks
 	killall -q -9 v2ray-plugin
 	killall -q -9 gq-client
-        killall -q -9 dnscrypt-proxy
+    killall -q -9 dnscrypt-proxy
 	killall -q -9 dnsforwarder
 	killall -q -9 gq-server
 	killall -q -9 obfs-local
 	killall -q -9 obfs-server
 	killall -q -9 chinadns
-        killall -q -9 udp2raw
-        killall -q -9 udpspeeder
+    killall -q -9 udp2raw
+    killall -q -9 udpspeeder
 	if [ -f /var/run/pdnsd.pid ]; then
-		kill $(cat /var/run/pdnsd.pid) >/dev/null 2>&1
+    kill $(cat /var/run/pdnsd.pid) >/dev/null 2>&1
 	else
 		kill -9 $(busybox ps -w | grep pdnsd | grep -v grep | awk '{print $1}') >/dev/null 2>&1
 	fi

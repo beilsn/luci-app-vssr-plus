@@ -219,7 +219,7 @@ function act_ping()
 	socket:close()
 	e.ping = luci.sys.exec("ping -c 1 -W 1 %q 2>&1 | grep -o 'time=[0-9]*.[0-9]' | awk -F '=' '{print$2}'" % domain)
 	if (e.ping == "") then
-		e.ping = luci.sys.exec(string.format("echo -n $(tcpping -c 1 -i 1 -p %s %s 2>&1 | grep -o 'ttl=[0-9]* time=[0-9]*.[0-9]' | awk -F '=' '{print$3}') 2>/dev/null",port, domain))
+		e.ping = luci.sys.exec(string.format("echo -n $(tcping -q -c 1 -i 1 -t 2 -p %s %s 2>&1 | grep -o 'time=[0-9]*' | awk -F '=' '{print $2}') 2>/dev/null",port, domain))
   end
 	if (iret == 0) then
 		luci.sys.call(" ipset del ss_spec_wan_ac " .. domain)
@@ -423,7 +423,8 @@ function check_ip()
     local d = {}
     local mm = require 'maxminddb'
     local db = mm.open('/usr/share/vssr/GeoLite2-Country.mmdb')
-    local ip = string.gsub(luci.sys.exec("curl -s https://api.ip.sb/ip"), "\n", "")
+    local http = require "luci.sys"
+    local ip = string.gsub(http.httpget("https://api.ip.sb/ip"), "\n", "")
     local res = db:lookup(ip)
     d.flag = string.lower(res:get("country", "iso_code"))
     d.country = res:get("country", "names", "zh-CN")

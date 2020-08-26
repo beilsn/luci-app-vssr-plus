@@ -1,7 +1,7 @@
 -- Copyright (C) 2017 yushi studio <ywb94@qq.com>
 -- Licensed to the public under the GNU General Public License v3.
 
-local IPK_Version="20200414.1.33"
+local IPK_Version="20200810.1.45"
 local m, s, o
 local redir_run=0
 local reudp_run=0
@@ -403,20 +403,20 @@ s.value = translate("Not Running")
 end
 end
 
-if nixio.fs.access("/usr/bin/ssr-server") then
-s=m:field(DummyValue,"server_run",translate("Global SSR Server")) 
+if nixio.fs.access("/usr/bin/ss-server") then
+s=m:field(DummyValue,"sserver_run",translate("Global SS Server")) 
 s.rawhtml  = true
-if server_run == 1 then
+if sserver_run == 1 then
 s.value =font_blue .. bold_on .. translate("Running") .. bold_off .. font_off
 else
 s.value = translate("Not Running")
 end
 end
 
-if nixio.fs.access("/usr/bin/ss-server") then
-s=m:field(DummyValue,"sserver_run",translate("Global SS Server")) 
+if nixio.fs.access("/usr/bin/ssr-server") then
+s=m:field(DummyValue,"server_run",translate("Global SSR Server")) 
 s.rawhtml  = true
-if sserver_run == 1 then
+if server_run == 1 then
 s.value =font_blue .. bold_on .. translate("Running") .. bold_off .. font_off
 else
 s.value = translate("Not Running")

@@ -1,12 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-vssr-plus
-PKG_VERSION:=1.33
-PKG_RELEASE:=4-20200414
+PKG_VERSION:=1.55
+PKG_RELEASE:=20200826
 
 PKG_CONFIG_DEPENDS:= CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_V2ray \
-        CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Trojan \
+    CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Trojan \
+	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_NaiveProxy \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Kcptun:kcptun \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Server \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Server \
@@ -20,8 +21,8 @@ PKG_CONFIG_DEPENDS:= CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_dnsforwarder \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_haproxy \
-        CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_udpspeeder \
-        CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_udp2raw-tunnel \
+    CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_udpspeeder \
+    CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_udp2raw-tunnel \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_privoxy \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_simple-obfs\
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_simple-obfs-server\
@@ -34,111 +35,116 @@ include $(INCLUDE_DIR)/package.mk
 define Package/$(PKG_NAME)/config
 config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks
 	bool "Include Shadowsocks New Version"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_V2ray
 	bool "Include V2ray"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_Trojan
 	bool "Include Trojan"
-	default y
+	default y if i386||x86_64||arm||aarch64
+
+config PACKAGE_$(PKG_NAME)_INCLUDE_NaiveProxy
+	bool "Include NaiveProxy"
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_Kcptun
 	bool "Include Kcptun"
-	default y
+	default n
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Server
 	bool "Include ShadowsocksR Server"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Server
 	bool "Include Shadowsocks Server"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Socks
 	bool "Include ShadowsocksR Socks and Tunnel"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Socks
 	bool "Include Shadowsocks Socks and Tunnel"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_ipt2socks
 	bool "Include ipt2socks"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_microsocks
 	bool "Include microsocks"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_redsocks2
 	bool "Include redsocks2"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_dns2socks
 	bool "Include dns2socks"
-	default y 
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_dnscrypt_proxy
 	bool "Include dnscrypt-proxy-full"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_dnsforwarder
 	bool "Include dnsforwarder"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS
 	bool "Include chinadns"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_haproxy
 	bool "Include haproxy"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_privoxy
 	bool "Include privoxy http local"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_simple-obfs
 	bool "Include simple-obfsl"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_simple-obfs-server
 	bool "Include simple-obfs-server"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_udpspeeder
 	bool "Include udpspeeder"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_udp2raw-tunnel
 	bool "Include udp2raw-tunnel"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_GoQuiet-client
 	bool "Include GoQuiet-client"
-	default y
+	default y if i386||x86_64||arm||aarch64
 	
 config PACKAGE_$(PKG_NAME)_INCLUDE_GoQuiet-server
 	bool "Include GoQuiet-server"
-	default y
+	default y if i386||x86_64||arm||aarch64
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_v2ray-plugin
 	bool "Include v2ray-plugin"
-	default y
+	default y if i386||x86_64||arm||aarch64
 endef
 
 define Package/luci-app-vssr-plus
  	SECTION:=luci
 	CATEGORY:=LuCI
 	SUBMENU:=3. Applications
-	TITLE:=A New SS/SSR/V2Ray/Trojan/Socks5 LuCI interface
+	TITLE:=A New SS/SSR/V2Ray/Trojan/NaiveProxy/Socks5 LuCI interface
 	PKGARCH:=all
-	DEPENDS:=+shadowsocksr-libev-alt +ipset +ip-full +iptables-mod-tproxy +dnsmasq-full +coreutils +coreutils-base64 +bash +pdnsd-alt +wget  +tcpping +lua-maxminddb +lua +luasocket +jshn +lua-cjson +coreutils-nohup  +curl \
+	DEPENDS:=+shadowsocksr-libev-alt +ipset +ip-full +iptables-mod-tproxy +dnsmasq-full +coreutils +coreutils-base64 +bash +pdnsd-alt +wget  +tcping +lua-maxminddb +lua +luasocket +jshn +lua-cjson +coreutils-nohup  +curl +naiveproxy\
             +PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks:shadowsocks-libev-ss-redir \
             +PACKAGE_$(PKG_NAME)_INCLUDE_V2ray:v2ray \
             +PACKAGE_$(PKG_NAME)_INCLUDE_Trojan:trojan \
+	        +PACKAGE_$(PKG_NAME)_INCLUDE_NaiveProxy:naiveproxy \
             +PACKAGE_$(PKG_NAME)_INCLUDE_Kcptun:kcptun-client \
             +PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Server:shadowsocksr-libev-server \
             +PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Server:shadowsocks-libev-ss-server \
